@@ -81,7 +81,12 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Arc.h" />
+    <ClInclude Include="BaseArc.h" />
+    <ClInclude Include="BaseNode.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

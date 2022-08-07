@@ -38,7 +38,7 @@ struct Node : public BaseNode
 	}
 
 	void Init();
-	void Step_CPU(value_t* NodeData);
+	void Step_CPU(value_t* NodeData, value_t t);
 
 	state_t makeArray();
 	void print(string dataHeader, value_t* data, ofstream& ofs, value_t t, bool hdr);
@@ -127,8 +127,8 @@ void Node::Init() {
 
 }
 
-__global__ void NodeStep_GPU(value_t* NodeData, unsigned NodeLength,
-	value_t Drift, value_t Diffusion, value_t BoxWidth, value_t dt, curandState *states) {
+__device__ void NodeStep_GPU(value_t* NodeData, unsigned NodeLength,
+	value_t Drift, value_t Diffusion, value_t BoxWidth, value_t dt, value_t t, curandState *states) {
 
 	const int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -138,7 +138,7 @@ __global__ void NodeStep_GPU(value_t* NodeData, unsigned NodeLength,
 
 	// Unpack
 	unsigned idx = tid * NodeLength;
-	value_t ID = (unsigned)NodeData[idx];
+	unsigned ID = (unsigned)NodeData[idx];
 	value_t X = NodeData[idx + 1];
 	value_t Y = NodeData[idx + 2];
 	value_t FX = NodeData[idx + 3];
@@ -173,6 +173,13 @@ __global__ void NodeStep_GPU(value_t* NodeData, unsigned NodeLength,
 	if (Y < minPos) { Y = minPos; }
 	if (Y > maxPos) { Y = maxPos; }
 
+
+
+	if (abs(NodeData[idx + 1] - X) < .001) {
+		printf("!!!!!!!!!Node ID:  %d idx:  %d t:  %f \n", ID, idx, t);
+	}
+	printf("Node ID:  %d idx:  %d tid:  %d t:  %f \n", ID, idx, tid, t);
+
 	// Pack
 	NodeData[idx + 1] = X;
 	NodeData[idx + 2] = Y;
@@ -184,10 +191,12 @@ __global__ void NodeStep_GPU(value_t* NodeData, unsigned NodeLength,
 	NodeData[idx + 8] = dX;
 	NodeData[idx + 9] = dY;
 
-	//__syncthreads();
+
+
+	__syncthreads();
 
 }
-void Node::Step_CPU(value_t* NodeData) {
+void Node::Step_CPU(value_t* NodeData, value_t) {
 	// Constants
 	value_t minPos = 0.0;
 	value_t maxPos = BoxWidth;

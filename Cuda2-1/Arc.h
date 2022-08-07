@@ -29,7 +29,7 @@ struct Arc: public BaseArc
 		ArcLength = 5;
 	}
 	void Init(unsigned NumNode);
-	void Step_CPU(value_t* ArcData, value_t* NodeData);
+	void Step_CPU(value_t* ArcData, value_t* NodeData, value_t t);
 
 	state_t makeArray();
 	void print(string dataHeader, ofstream ofs, value_t t, bool hdr);
@@ -122,7 +122,8 @@ void Arc::Init(unsigned NumNode) {
 
 }
 
-__global__ void ArcStep_GPU(value_t* ArcData, value_t* NodeData, unsigned ArcLength, unsigned NodeLength) {
+__device__ void ArcStep_GPU(value_t* ArcData, value_t* NodeData, unsigned ArcLength, unsigned NodeLength,
+	value_t t) {
 
 	// Constants
 	const unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -140,10 +141,10 @@ __global__ void ArcStep_GPU(value_t* ArcData, value_t* NodeData, unsigned ArcLen
 	value_t Ysucc = NodeData[SUCC * NodeLength + 2];
 
 	// Dynamics
-	value_t DFXpred = ATTR * ALPH * (Xpred - Xsucc);
-	value_t DFYpred = ATTR * ALPH * (Ypred - Ysucc);
-	value_t DFXsucc = -ATTR * ALPH * (Xpred - Xsucc);
-	value_t DFYsucc = -ATTR * ALPH * (Ypred - Ysucc);
+	value_t DFXpred = -ATTR * ALPH * (Xpred - Xsucc);
+	value_t DFYpred = -ATTR * ALPH * (Ypred - Ysucc);
+	value_t DFXsucc =  ATTR * ALPH * (Xpred - Xsucc);
+	value_t DFYsucc =  ATTR * ALPH * (Ypred - Ysucc);
 
 	// Pack
 	/*NodeData[PRED * NodeLength + 3] = NodeData[PRED * NodeLength + 3] + DFXpred;
@@ -155,11 +156,13 @@ __global__ void ArcStep_GPU(value_t* ArcData, value_t* NodeData, unsigned ArcLen
 	atomicAdd(&(NodeData[SUCC * NodeLength + 3]), DFXsucc);
 	atomicAdd(&(NodeData[SUCC * NodeLength + 4]), DFYsucc);
 
-	//__syncthreads();
+	printf("Arc ID:  %d idx:  %d  t:  %f \n", ID, idx, t);
+
+	__syncthreads();
 }
 
 
-void Arc::Step_CPU(value_t* ArcData, value_t* NodeData) {
+void Arc::Step_CPU(value_t* ArcData, value_t* NodeData, value_t) {
 	// Constants
 
 
@@ -178,10 +181,10 @@ void Arc::Step_CPU(value_t* ArcData, value_t* NodeData) {
 		value_t Ysucc = NodeData[SUCC * NodeLength + 2];
 
 		// Dynamics
-		value_t DFXpred = ATTR * ALPH * (Xpred - Xsucc);
-		value_t DFYpred = ATTR * ALPH * (Ypred - Ysucc);
-		value_t DFXsucc = -ATTR * ALPH * (Xpred - Xsucc);
-		value_t DFYsucc = -ATTR * ALPH * (Ypred - Ysucc);
+		value_t DFXpred = -ATTR * ALPH * (Xpred - Xsucc);
+		value_t DFYpred = -ATTR * ALPH * (Ypred - Ysucc);
+		value_t DFXsucc =  ATTR * ALPH * (Xpred - Xsucc);
+		value_t DFYsucc =  ATTR * ALPH * (Ypred - Ysucc);
 
 		// Pack
 
